@@ -29,7 +29,47 @@ std::unique_ptr<arma::Mat<T>> convolve(arma::Mat<T> &matrix, arma::Mat<T> &kerne
                     jj = j + (x - Kcx);
 
                     if (ii >= 0 && ii < Mm && jj >= 0 && jj < Mn) {
+                        // Normal case, we aren't trying to read from an invalid index
                         sum += matrix(ii, jj) * kernel(mm, nn);
+
+                    } else {
+                        // We are trying to read from an invalid index, so we extend the last valid element outward
+                        if (ii < 0) {
+                            if (jj < 0) {
+                                // Top left
+                                sum += matrix(0, 0) * kernel(mm, nn);
+                            } else if (jj >= Mn) {
+                                // Top right
+                                sum += matrix(0, Mn - 1) * kernel(mm, nn);
+                            } else {
+                                // Top middle
+                                sum += matrix(0, jj) * kernel(mm, nn);
+                            }
+                        } else if (ii >= Mm) {
+                            if (jj < 0) {
+                                // Bottom left
+                                sum += matrix(Mm - 1, 0) * kernel(mm, nn);
+                            } else if (jj >= Mn) {
+                                // Bottom right
+                                sum += matrix(Mm - 1, Mn - 1) * kernel(mm, nn);
+                            } else {
+                                // Bottom middle
+                                sum += matrix(Mm - 1, jj) * kernel(mm, nn);
+                            }
+                        } else if (jj < 0) {
+                            if (ii >= 0 && ii < Mm) {
+                                // Left middle
+                                // We don't handle left top or bottom because those are handled above
+                                sum += matrix(ii, 0) * kernel(mm, nn);
+                            }
+                        } else if (jj >= Mn) {
+                            if (ii >= 0 && ii < Mm) {
+                                // Right middle
+                                // We don't handle right top or bottom because those are handled above
+                                sum += matrix(ii, Mm - 1) * kernel(mm, nn);
+                            }
+                        }
+
                     }
                 }
             }
@@ -97,18 +137,7 @@ int main(int argc, char **argv) {
     // Apply the edge detect operators
     std::unique_ptr<arma::Mat<int>> edge_x = convolve<int>(*image, *Gx);
     std::unique_ptr<arma::Mat<int>> edge_y = convolve<int>(*image, *Gy);
-    arma::Mat<int> edge = arma::sqrt<arma::Mat<int>>(
-            arma::square<arma::Mat<int>>(*edge_x) + arma::square<arma::Mat<int>>(*edge_y));
-
-    // Cheat until the convolution handles edges properly (we zero them here)
-    for (unsigned long long i = 0; i < arma::size(edge).n_rows; i++) {
-        edge(i, 0) = 0;
-        edge(i, arma::size(edge).n_cols - 1) = 0;
-    }
-    for (unsigned long long i = 0; i < arma::size(edge).n_cols; i++) {
-        edge(0, i) = 0;
-        edge(arma::size(edge).n_rows - 1, i) = 0;
-    }
+    arma::Mat<int> edge = arma::sqrt<arma::Mat<int>>(arma::square<arma::Mat<int>>(*edge_x) + arma::square<arma::Mat<int>>(*edge_y));
     print_timestamped("Successfully generated edge matrix.", start);
 
     // Go through every nonzero element and draw lines through it in polar normal form, accumulating the result in a seperate matrix
