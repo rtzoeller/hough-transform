@@ -113,17 +113,19 @@ int main(int argc, char **argv) {
     const int theta_max = 1000;
     const double pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148;
 
-    if (argc == 1) {
-        std::cout << "Please give a threshold value." << std::endl;
+
+    if (argc < 3) {
+        std::cout << "Please give a threshold value and filename." << std::endl;
         return -1;
     }
     std::string threshold_s(argv[1]);
     int threshold = std::stoi(threshold_s);
+    std::string input_file(argv[2]);
 
     // Read in the image and convert it to an Armadillo matrix
     std::unique_ptr<arma::Mat<int>> image;
     try {
-        image = open_image_grayscale<int>("test2.png");
+        image = open_image_grayscale<int>(input_file);
     } catch (cv::Exception e) {
         std::cout << "Unable to open file." << std::endl;
         return -1;
@@ -162,23 +164,23 @@ int main(int argc, char **argv) {
 
     unsigned long long max_row = 0;
     unsigned long long max_col = 0;
-    int max = acc.max(max_row, max_col);
+    acc.max(max_row, max_col);
 
     double theta = pi * ((((double) max_row) - theta_max) / (2 * theta_max));
     long long rho = max_col - rho_max;
 
     double x = rho * std::cos(theta);
     double y = rho * std::sin(theta);
-    double slope = -y / x;
+    double slope = -y/x;
     long long right_side_x = arma::size(*image).n_cols - 1;
-    long long left_inter = std::round(slope * (0 - x) + y);
-    long long right_inter = std::round(slope * (right_side_x - x) + y);
+    long long left_inter = std::llround(slope * (0 - x) + y);
+    long long right_inter = std::llround(slope * (right_side_x - x) + y);
 
-    cv::Mat lined = cv::imread("test2.png", CV_LOAD_IMAGE_GRAYSCALE);
+    cv::Mat lined = cv::imread(input_file, CV_LOAD_IMAGE_GRAYSCALE);
     cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33));
     cv::imwrite("output.png", lined);
-
-    std::cout << "Max: " << max << " at (theta, rho): " << theta << ", " << rho << std::endl;
+    print_timestamped("Successfully saved output image.", start);
+    std::cout << slope << " " << rho << " " << theta << " " << x << " " << y << " " << left_inter << " " << right_inter;
 
     return 0;
 }
