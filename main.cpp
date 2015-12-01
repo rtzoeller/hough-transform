@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
 
     double x = rho * std::cos(theta);
     double y = rho * std::sin(theta);
-    double slope = -y/x;
+    double slope = -x/y;
     long long right_side_x = arma::size(*image).n_cols - 1;
     long long left_inter = std::llround(slope * (0 - x) + y);
     long long right_inter = std::llround(slope * (right_side_x - x) + y);
