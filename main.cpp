@@ -146,13 +146,15 @@ int main(int argc, char **argv) {
     const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
     arma::Mat<int> acc(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
     arma::uvec nonzero = arma::find(edge > threshold);
-    for (unsigned long long i = 0; i < arma::size(nonzero).n_rows; i++) {
-        int x = nonzero(i) / arma::size(edge).n_rows;
-        int y = nonzero(i) % arma::size(edge).n_rows;
+    for (unsigned long long j = 0; j < arma::size(acc).n_rows; j++) {
+        double theta = pi * ((((double) j) - theta_max) / (2 * theta_max));
+        double s = std::sin(theta);
+        double c = std::cos(theta);
 
-        for (unsigned long long j = 0; j < arma::size(acc).n_rows; j++) {
-            double theta = pi * ((((double) j) - theta_max) / (2 * theta_max));
-            long long rho_rounded = std::llround((x * std::cos(theta) + y * std::sin(theta)));
+        for (unsigned long long i = 0; i < arma::size(nonzero).n_rows; i++) {
+            int x = nonzero(i) / arma::size(edge).n_rows;
+            int y = nonzero(i) % arma::size(edge).n_rows;
+            long long rho_rounded = std::llround((x * c + y * s));
             long long k = rho_rounded + rho_max;
             acc(j, k) = acc(j, k) + 1;
         }
