@@ -2,7 +2,30 @@
 #include <opencv2/opencv.hpp>
 #include <memory>
 #include <chrono>
+#include <thread>
 #include "edge_detect_operators.h"
+
+const int theta_max = 1000;
+const double pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148;
+
+void foo(unsigned int lower, unsigned int upper, arma::Mat<int>& acc, arma::uvec& nonzero, arma::Mat<int>& edge) {
+    const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
+    for (unsigned long long j = lower; j < upper; j++) {
+        double theta = pi * ((((double) j) - theta_max) / (2 * theta_max));
+        double s = std::sin(theta);
+        double c = std::cos(theta);
+
+        for (unsigned long long i = 0; i < arma::size(nonzero).n_rows; i++) {
+            int x = nonzero(i) / arma::size(edge).n_rows;
+            int y = nonzero(i) % arma::size(edge).n_rows;
+            long long rho_rounded = std::llround((x * c + y * s));
+            long long k = rho_rounded + rho_max;
+            acc(j, k) = acc(j, k) + 1;
+        }
+    }
+
+}
+
 
 
 template<typename T>
@@ -110,9 +133,6 @@ void print_timestamped(std::string message, std::chrono::steady_clock::time_poin
 
 int main(int argc, char **argv) {
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    const int theta_max = 1000;
-    const double pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148;
-
 
     if (argc < 3) {
         std::cout << "Please give a threshold value and filename." << std::endl;
@@ -162,6 +182,37 @@ int main(int argc, char **argv) {
     }
     print_timestamped("Successfully generated accumulator matrix.", start);
 
+    // Distribute the work to as many threads as allowed
+    const unsigned int num_threads = 8;
+    std::vector<std::thread> pool(num_threads);
+    std::vector<arma::Mat<int>> accs(num_threads);
+    arma::Mat<int> acc2(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
+    for (unsigned int i = 0; i < num_threads; i++) {
+        accs.at(i) = arma::Mat<int>(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
+
+        int lower = i * ((2 * theta_max + 1) / pool.size());
+        int upper;
+        if (i + 1 == pool.size()) {
+            upper = 2 * theta_max + 1;
+        } else {
+            upper = (i + 1) * ((2 * theta_max + 1) / pool.size());
+        }
+        pool.at(i) = std::thread(foo, lower, upper, std::ref(accs.at(i)), std::ref(nonzero), std::ref(edge));
+    }
+    // Merge the worker threads back into the main one
+    for (unsigned int i = 0; i < num_threads; i++) {
+        pool.at(i).join();
+    }
+    for (unsigned int x = 0; x < arma::size(accs.at(0)).n_cols; x++) {
+        for (unsigned int y = 0; y < arma::size(accs.at(0)).n_rows; y++) {
+            acc2(x,y) = 0;
+            for (unsigned int i = 0; i < num_threads; i++) {
+                acc2(x,y) += accs.at(i)(x,y);
+            }
+        }
+    }
+    std::cout << arma::find(acc2 != acc) << std::endl;
+
     save_image_grayscale(acc, "heatmap.png");
 
     unsigned long long max_row = 0;
@@ -182,7 +233,6 @@ int main(int argc, char **argv) {
     cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33));
     cv::imwrite("output.png", lined);
     print_timestamped("Successfully saved output image.", start);
-    std::cout << slope << " " << rho << " " << theta << " " << x << " " << y << " " << left_inter << " " << right_inter;
-
+    std::cout << slope << " " << rho << " " << theta << " " << x << " " << y << " " << left_inter << " " << right_inter << std::endl;
     return 0;
 }
