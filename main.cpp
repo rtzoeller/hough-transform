@@ -166,40 +166,28 @@ int main(int argc, char **argv) {
     // Distribute the work to as many threads as allowed (currently hard coded to 8 to match test machine)
     const unsigned int num_threads = 8;
     std::vector<std::thread> pool(num_threads);
-    std::vector<arma::Mat<int>> accs(num_threads);
 
     const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
     arma::uvec nonzero = arma::find(edge > threshold);
     arma::Mat<int> acc(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
     for (unsigned int i = 0; i < num_threads; i++) {
-        accs.at(i) = arma::Mat<int>(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
-
-        int lower = i * ((2 * theta_max + 1) / pool.size());
+        int lower = i * ((2 * theta_max + 1) / num_threads);
         int upper;
-        if (i + 1 == pool.size()) {
+        if (i + 1 == num_threads) {
             upper = 2 * theta_max + 1;
         } else {
-            upper = (i + 1) * ((2 * theta_max + 1) / pool.size());
+            upper = (i + 1) * ((2 * theta_max + 1) / num_threads);
         }
-        pool.at(i) = std::thread(foo, lower, upper, std::ref(accs.at(i)), std::ref(nonzero), std::ref(edge));
+        // We pass in a reference to the accumulator matrix itself here, which poses some issues if we
+        // are not careful. All threads will have access to the same matrix in memory, so if any threads
+        // are modifying the same portion of the matrix data will become corrupted.
+        // We solve this by having each thread exclusively write to a unique block of the matrix,
+        // seperated by upper and lower bounds on theta. This needs to be enforced strictly.
+        pool.at(i) = std::thread(foo, lower, upper, std::ref(acc), std::ref(nonzero), std::ref(edge));
     }
     // Merge the worker threads back into the main one
     for (unsigned int i = 0; i < num_threads; i++) {
         pool.at(i).join();
-    }
-    // Copy the accumulated values into the resulting accumulator
-    // We can simply copy submatrices since we split into threads based
-    // on ranges of theta
-    for (unsigned int i = 0; i < num_threads; i++) {
-        int lower = i * ((2 * theta_max + 1) / pool.size());
-        int upper;
-        if (i + 1 == pool.size()) {
-            upper = 2 * theta_max + 1;
-        } else {
-            upper = (i + 1) * ((2 * theta_max + 1) / pool.size());
-        }
-        // Subtract one because Armadillo uses an inclusive instead of exclusive range
-        acc.rows(lower, upper - 1) = accs.at(i).rows(lower, upper - 1);
     }
     print_timestamped("Successfully generated accumulator matrix.", start);
 
