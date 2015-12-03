@@ -9,6 +9,7 @@ const int theta_max = 1000;
 const double pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148;
 
 void foo(unsigned int lower, unsigned int upper, arma::Mat<int>& acc, arma::uvec& nonzero, arma::Mat<int>& edge) {
+    // Go through every nonzero element and draw lines through it in polar normal form, accumulating the result in a seperate matrix
     const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
     for (unsigned long long j = lower; j < upper; j++) {
         double theta = pi * ((((double) j) - theta_max) / (2 * theta_max));
@@ -162,31 +163,14 @@ int main(int argc, char **argv) {
     arma::Mat<int> edge = arma::sqrt<arma::Mat<int>>(arma::square<arma::Mat<int>>(*edge_x) + arma::square<arma::Mat<int>>(*edge_y));
     print_timestamped("Successfully generated edge matrix.", start);
 
-    // Go through every nonzero element and draw lines through it in polar normal form, accumulating the result in a seperate matrix
-    const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
-    arma::Mat<int> acc(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
-    arma::uvec nonzero = arma::find(edge > threshold);
-    for (unsigned long long j = 0; j < arma::size(acc).n_rows; j++) {
-        double theta = pi * ((((double) j) - theta_max) / (2 * theta_max));
-        double s = std::sin(theta);
-        double c = std::cos(theta);
-
-        for (unsigned long long i = 0; i < arma::size(nonzero).n_rows; i++) {
-            int x = nonzero(i) / arma::size(edge).n_rows;
-            int y = nonzero(i) % arma::size(edge).n_rows;
-            long long rho_rounded = std::llround((x * c + y * s));
-            long long k = rho_rounded + rho_max;
-            acc(j, k) = acc(j, k) + 1;
-        }
-
-    }
-    print_timestamped("Successfully generated accumulator matrix.", start);
-
-    // Distribute the work to as many threads as allowed
+    // Distribute the work to as many threads as allowed (currently hard coded to 8 to match test machine)
     const unsigned int num_threads = 8;
     std::vector<std::thread> pool(num_threads);
     std::vector<arma::Mat<int>> accs(num_threads);
-    arma::Mat<int> acc2(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
+
+    const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
+    arma::uvec nonzero = arma::find(edge > threshold);
+    arma::Mat<int> acc(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
     for (unsigned int i = 0; i < num_threads; i++) {
         accs.at(i) = arma::Mat<int>(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
 
@@ -203,15 +187,21 @@ int main(int argc, char **argv) {
     for (unsigned int i = 0; i < num_threads; i++) {
         pool.at(i).join();
     }
-    for (unsigned int x = 0; x < arma::size(accs.at(0)).n_cols; x++) {
-        for (unsigned int y = 0; y < arma::size(accs.at(0)).n_rows; y++) {
-            acc2(x,y) = 0;
-            for (unsigned int i = 0; i < num_threads; i++) {
-                acc2(x,y) += accs.at(i)(x,y);
-            }
+    // Copy the accumulated values into the resulting accumulator
+    // We can simply copy submatrices since we split into threads based
+    // on ranges of theta
+    for (unsigned int i = 0; i < num_threads; i++) {
+        int lower = i * ((2 * theta_max + 1) / pool.size());
+        volatile int upper;
+        if (i + 1 == pool.size()) {
+            upper = 2 * theta_max + 1;
+        } else {
+            upper = (i + 1) * ((2 * theta_max + 1) / pool.size());
         }
+        // Subtract one because Armadillo uses an inclusive instead of exclusive range
+        acc.rows(lower, upper - 1) = accs.at(i).rows(lower, upper - 1);
     }
-    std::cout << arma::find(acc2 != acc) << std::endl;
+    print_timestamped("Successfully generated accumulator matrix.", start);
 
     save_image_grayscale(acc, "heatmap.png");
 
@@ -221,18 +211,21 @@ int main(int argc, char **argv) {
 
     double theta = pi * ((((double) max_row) - theta_max) / (2 * theta_max));
     long long rho = max_col - rho_max;
-
-    double x = rho * std::cos(theta);
-    double y = rho * std::sin(theta);
-    double slope = -x/y;
-    long long right_side_x = arma::size(*image).n_cols - 1;
-    long long left_inter = std::llround(slope * (0 - x) + y);
-    long long right_inter = std::llround(slope * (right_side_x - x) + y);
-
     cv::Mat lined = cv::imread(input_file, CV_LOAD_IMAGE_GRAYSCALE);
-    cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33));
+
+    if (theta == 0) {
+        cv::line(lined, cv::Point(rho, 0), cv::Point(rho, arma::size(*image).n_rows - 1), cv::Scalar(33, 33, 33));
+    } else {
+        double x = rho * std::cos(theta);
+        double y = rho * std::sin(theta);
+        double slope = -x / y;
+        long long right_side_x = arma::size(*image).n_cols - 1;
+        long long left_inter = std::llround(slope * (0 - x) + y);
+        long long right_inter = std::llround(slope * (right_side_x - x) + y);
+        cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33), 10);
+    }
+
     cv::imwrite("output.png", lined);
     print_timestamped("Successfully saved output image.", start);
-    std::cout << slope << " " << rho << " " << theta << " " << x << " " << y << " " << left_inter << " " << right_inter << std::endl;
     return 0;
 }
