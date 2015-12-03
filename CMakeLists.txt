@@ -7,8 +7,11 @@ include_directories(${ARMADILLO_INCLUDE_DIRS})
 
 configure_file(test.png ${CMAKE_CURRENT_BINARY_DIR}/test.png COPYONLY)
 configure_file(test2.png ${CMAKE_CURRENT_BINARY_DIR}/test2.png COPYONLY)
+configure_file(test3.png ${CMAKE_CURRENT_BINARY_DIR}/test3.png COPYONLY)
+configure_file(test4.png ${CMAKE_CURRENT_BINARY_DIR}/test4.png COPYONLY)
+configure_file(test5.png ${CMAKE_CURRENT_BINARY_DIR}/test5.png COPYONLY)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O2 -g -march=native -ftree-vectorize -fwhole-program -Wall -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -O2 -g -march=native -ftree-vectorize -fwhole-program -Wall -Werror -Wno-unused")
 
 set(SOURCE_FILES main.cpp edge_detect_operators.h)
 add_executable(Hough ${SOURCE_FILES})
