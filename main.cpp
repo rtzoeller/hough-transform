@@ -5,38 +5,37 @@
 #include <thread>
 #include "edge_detect_operators.h"
 
+const unsigned int num_threads = 8; // Currently hard coded to 8 to match test machine
 const int theta_max = 1000;
 const double pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148;
 
-void foo(unsigned int lower, unsigned int upper, arma::Mat<int>& acc, arma::uvec& nonzero, arma::Mat<int>& edge) {
+void hough_accumulate(unsigned int lower, unsigned int upper, arma::Mat<int> &acc, const arma::uvec &nonzero,
+                      const arma::Mat<int> &edge) {
     // Go through every nonzero element and draw lines through it in polar normal form, accumulating the result in a seperate matrix
-    const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
+    const long long rho_max = std::llround(std::sqrt(edge.n_rows * edge.n_rows + edge.n_cols * edge.n_cols));
     for (unsigned long long j = lower; j < upper; j++) {
         double theta = pi * ((((double) j) - theta_max) / (2 * theta_max));
         double s = std::sin(theta);
         double c = std::cos(theta);
 
-        for (unsigned long long i = 0; i < arma::size(nonzero).n_rows; i++) {
-            int x = nonzero(i) / arma::size(edge).n_rows;
-            int y = nonzero(i) % arma::size(edge).n_rows;
+        for (unsigned long long i = 0; i < nonzero.n_rows; i++) {
+            int x = nonzero(i) / edge.n_rows;
+            int y = nonzero(i) % edge.n_rows;
             long long rho_rounded = std::llround((x * c + y * s));
             long long k = rho_rounded + rho_max;
             acc(j, k) = acc(j, k) + 1;
         }
     }
-
 }
 
-
-
 template<typename T>
-std::unique_ptr<arma::Mat<T>> convolve(arma::Mat<T> &matrix, arma::Mat<T> &kernel) {
+std::unique_ptr<arma::Mat<T>> convolve(const arma::Mat<T> &matrix, const arma::Mat<T> &kernel) {
     // TODO: Specialize for separable kernels
     unsigned long long Mm, Mn, Km, Kn, Kcx, Kcy, mm, nn, ii, jj;
-    Mm = arma::size(matrix).n_rows;
-    Mn = arma::size(matrix).n_cols;
-    Km = arma::size(kernel).n_rows;
-    Kn = arma::size(kernel).n_cols;
+    Mm = matrix.n_rows;
+    Mn = matrix.n_cols;
+    Km = kernel.n_rows;
+    Kn = kernel.n_cols;
     Kcx = Kn / 2;
     Kcy = Km / 2;
 
@@ -115,7 +114,7 @@ std::unique_ptr<arma::Mat<T>> open_image_grayscale(std::string filename) {
 }
 
 template<typename T>
-void save_image_grayscale(arma::Mat<T> &matrix, std::string filename) {
+void save_image_grayscale(const arma::Mat<T> &matrix, std::string filename) {
     // Scale down to a 0-255 range
 
     arma::Mat<T> scaled(matrix);
@@ -123,7 +122,7 @@ void save_image_grayscale(arma::Mat<T> &matrix, std::string filename) {
     scaled /= matrix.max();
     arma::Mat<uint8_t> bytes = arma::conv_to<arma::Mat<uint8_t>>::from(scaled);
     bytes = bytes.t();
-    cv::Mat image(arma::size(bytes).n_cols, arma::size(bytes).n_rows, CV_8UC1, bytes.memptr());
+    cv::Mat image(bytes.n_cols, bytes.n_rows, CV_8UC1, bytes.memptr());
     cv::imwrite(filename, image);
 }
 
@@ -163,11 +162,10 @@ int main(int argc, char **argv) {
     arma::Mat<int> edge = arma::sqrt<arma::Mat<int>>(arma::square<arma::Mat<int>>(*edge_x) + arma::square<arma::Mat<int>>(*edge_y));
     print_timestamped("Successfully generated edge matrix.", start);
 
-    // Distribute the work to as many threads as allowed (currently hard coded to 8 to match test machine)
-    const unsigned int num_threads = 8;
+    // Distribute the work to as many threads as allowed
     std::vector<std::thread> pool(num_threads);
 
-    const long long rho_max = std::llround(std::sqrt(arma::size(edge).n_rows * arma::size(edge).n_rows + arma::size(edge).n_cols * arma::size(edge).n_cols));
+    const long long rho_max = std::llround(std::sqrt(edge.n_rows * edge.n_rows + edge.n_cols * edge.n_cols));
     arma::uvec nonzero = arma::find(edge > threshold);
     arma::Mat<int> acc(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
     for (unsigned int i = 0; i < num_threads; i++) {
@@ -183,7 +181,7 @@ int main(int argc, char **argv) {
         // are modifying the same portion of the matrix data will become corrupted.
         // We solve this by having each thread exclusively write to a unique block of the matrix,
         // seperated by upper and lower bounds on theta. This needs to be enforced strictly.
-        pool.at(i) = std::thread(foo, lower, upper, std::ref(acc), std::ref(nonzero), std::ref(edge));
+        pool.at(i) = std::thread(hough_accumulate, lower, upper, std::ref(acc), std::ref(nonzero), std::ref(edge));
     }
     // Merge the worker threads back into the main one
     for (unsigned int i = 0; i < num_threads; i++) {
@@ -202,12 +200,12 @@ int main(int argc, char **argv) {
     cv::Mat lined = cv::imread(input_file, CV_LOAD_IMAGE_GRAYSCALE);
 
     if (theta == 0) {
-        cv::line(lined, cv::Point(rho, 0), cv::Point(rho, arma::size(*image).n_rows - 1), cv::Scalar(33, 33, 33));
+        cv::line(lined, cv::Point(rho, 0), cv::Point(rho, (*image).n_rows - 1), cv::Scalar(33, 33, 33));
     } else {
         double x = rho * std::cos(theta);
         double y = rho * std::sin(theta);
         double slope = -x / y;
-        long long right_side_x = arma::size(*image).n_cols - 1;
+        long long right_side_x = (*image).n_cols - 1;
         long long left_inter = std::llround(slope * (0 - x) + y);
         long long right_inter = std::llround(slope * (right_side_x - x) + y);
         cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33));
