@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
     // on ranges of theta
     for (unsigned int i = 0; i < num_threads; i++) {
         int lower = i * ((2 * theta_max + 1) / pool.size());
-        volatile int upper;
+        int upper;
         if (i + 1 == pool.size()) {
             upper = 2 * theta_max + 1;
         } else {
