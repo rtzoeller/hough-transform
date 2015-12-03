@@ -5,7 +5,6 @@
 #include <thread>
 #include "edge_detect_operators.h"
 
-const unsigned int num_threads = 8; // Currently hard coded to 8 to match test machine
 const int theta_max = 1000;
 const double pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148;
 
@@ -142,6 +141,12 @@ int main(int argc, char **argv) {
     int threshold = std::stoi(threshold_s);
     std::string input_file(argv[2]);
 
+    int num_threads = 1;
+    if (argc >= 4) {
+        std::string num_threads_s(argv[3]);
+        num_threads = std::stoi(num_threads_s);
+    }
+
     // Read in the image and convert it to an Armadillo matrix
     std::unique_ptr<arma::Mat<int>> image;
     try {
@@ -162,30 +167,34 @@ int main(int argc, char **argv) {
     arma::Mat<int> edge = arma::sqrt<arma::Mat<int>>(arma::square<arma::Mat<int>>(*edge_x) + arma::square<arma::Mat<int>>(*edge_y));
     print_timestamped("Successfully generated edge matrix.", start);
 
-    // Distribute the work to as many threads as allowed
-    std::vector<std::thread> pool(num_threads);
-
     const long long rho_max = std::llround(std::sqrt(edge.n_rows * edge.n_rows + edge.n_cols * edge.n_cols));
     arma::uvec nonzero = arma::find(edge > threshold);
     arma::Mat<int> acc(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
-    for (unsigned int i = 0; i < num_threads; i++) {
-        int lower = i * ((2 * theta_max + 1) / num_threads);
-        int upper;
-        if (i + 1 == num_threads) {
-            upper = 2 * theta_max + 1;
-        } else {
-            upper = (i + 1) * ((2 * theta_max + 1) / num_threads);
+    if (num_threads <= 1) {
+        hough_accumulate(0, 2 * theta_max + 1, std::ref(acc), std::ref(nonzero), std::ref(edge));
+    } else {
+        // Distribute the work to as many threads as allowed
+        std::vector<std::thread> pool(num_threads);
+
+        for (int i = 0; i < num_threads; i++) {
+            int lower = i * ((2 * theta_max + 1) / num_threads);
+            int upper;
+            if (i + 1 == num_threads) {
+                upper = 2 * theta_max + 1;
+            } else {
+                upper = (i + 1) * ((2 * theta_max + 1) / num_threads);
+            }
+            // We pass in a reference to the accumulator matrix itself here, which poses some issues if we
+            // are not careful. All threads will have access to the same matrix in memory, so if any threads
+            // are modifying the same portion of the matrix data will become corrupted.
+            // We solve this by having each thread exclusively write to a unique block of the matrix,
+            // seperated by upper and lower bounds on theta. This needs to be enforced strictly.
+            pool.at(i) = std::thread(hough_accumulate, lower, upper, std::ref(acc), std::ref(nonzero), std::ref(edge));
         }
-        // We pass in a reference to the accumulator matrix itself here, which poses some issues if we
-        // are not careful. All threads will have access to the same matrix in memory, so if any threads
-        // are modifying the same portion of the matrix data will become corrupted.
-        // We solve this by having each thread exclusively write to a unique block of the matrix,
-        // seperated by upper and lower bounds on theta. This needs to be enforced strictly.
-        pool.at(i) = std::thread(hough_accumulate, lower, upper, std::ref(acc), std::ref(nonzero), std::ref(edge));
-    }
-    // Merge the worker threads back into the main one
-    for (unsigned int i = 0; i < num_threads; i++) {
-        pool.at(i).join();
+        // Merge the worker threads back into the main one
+        for (int i = 0; i < num_threads; i++) {
+            pool.at(i).join();
+        }
     }
     print_timestamped("Successfully generated accumulator matrix.", start);
 
