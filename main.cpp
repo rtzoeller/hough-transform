@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
         long long right_side_x = arma::size(*image).n_cols - 1;
         long long left_inter = std::llround(slope * (0 - x) + y);
         long long right_inter = std::llround(slope * (right_side_x - x) + y);
-        cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33), 10);
+        cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33));
     }
 
     cv::imwrite("output.png", lined);
