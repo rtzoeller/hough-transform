@@ -133,18 +133,48 @@ void print_timestamped(std::string message, std::chrono::steady_clock::time_poin
 int main(int argc, char **argv) {
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-    if (argc < 3) {
-        std::cout << "Please give a threshold value and filename." << std::endl;
+    if (argc == 1) {
+        std::cout << "You must specify an input filename." << std::endl;
         return -1;
     }
-    std::string threshold_s(argv[1]);
-    int threshold = std::stoi(threshold_s);
-    std::string input_file(argv[2]);
 
     int num_threads = 1;
-    if (argc >= 4) {
-        std::string num_threads_s(argv[3]);
-        num_threads = std::stoi(num_threads_s);
+    int threshold = 100;
+    bool input_file_set = false;
+    std::string input_file;
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            // This is a flag
+            if (i + 1 < argc) {
+                if (strcmp(argv[i], "-j") == 0) {
+                    // Number of threads
+                    std::string s(argv[++i]);
+                    num_threads = std::stoi(s);
+                } else if (strcmp(argv[i], "-t") == 0) {
+                    std::string s(argv[++i]);
+                    threshold = std::stoi(s);
+                } else {
+                    std::cout << "Unknown parameter " << argv[i] << std::endl;
+                }
+            } else {
+                std::cout << "Incomplete parameterization." << std::endl;
+                return -1;
+            }
+
+        } else {
+            // This is the filename
+            if (input_file_set) {
+                std::cout << "Arguments may only include one non-identified parameter - the file name." << std::endl;
+                return -1;
+            }
+            input_file = argv[i];
+            input_file_set = true;
+        }
+    }
+
+    if (!input_file_set) {
+        std::cout << "Need to specify an input file." << std::endl;
     }
 
     // Read in the image and convert it to an Armadillo matrix
