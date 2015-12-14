@@ -133,13 +133,9 @@ void print_timestamped(std::string message, std::chrono::steady_clock::time_poin
 int main(int argc, char **argv) {
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-    if (argc == 1) {
-        std::cout << "You must specify an input filename." << std::endl;
-        return -1;
-    }
-
     int num_threads = 1;
     int threshold = 100;
+    std::string output_file = "output.png";
     bool input_file_set = false;
     std::string input_file;
 
@@ -154,6 +150,8 @@ int main(int argc, char **argv) {
                 } else if (strcmp(argv[i], "-t") == 0) {
                     std::string s(argv[++i]);
                     threshold = std::stoi(s);
+                } else if (strcmp(argv[i], "-o") == 0) {
+                    output_file = argv[++i];
                 } else {
                     std::cout << "Unknown parameter " << argv[i] << std::endl;
                 }
@@ -175,6 +173,7 @@ int main(int argc, char **argv) {
 
     if (!input_file_set) {
         std::cout << "Need to specify an input file." << std::endl;
+        return -1;
     }
 
     // Read in the image and convert it to an Armadillo matrix
@@ -250,7 +249,7 @@ int main(int argc, char **argv) {
         cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33));
     }
 
-    cv::imwrite("output.png", lined);
+    cv::imwrite(output_file, lined);
     print_timestamped("Successfully saved output image.", start);
     return 0;
 }
