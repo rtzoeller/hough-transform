@@ -2,30 +2,8 @@
 #include <opencv2/opencv.hpp>
 #include <memory>
 #include <chrono>
-#include <thread>
 #include "edge_detect_operators.h"
-
-const int theta_max = 1000;
-const double pi = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148;
-
-void hough_accumulate(unsigned int lower, unsigned int upper, arma::Mat<int> &acc, const arma::uvec &nonzero,
-                      const arma::Mat<int> &edge) {
-    // Go through every nonzero element and draw lines through it in polar normal form, accumulating the result in a seperate matrix
-    const long long rho_max = std::llround(std::sqrt(edge.n_rows * edge.n_rows + edge.n_cols * edge.n_cols));
-    for (unsigned long long j = lower; j < upper; j++) {
-        double theta = pi * ((((double) j) - theta_max) / (2 * theta_max));
-        double s = std::sin(theta);
-        double c = std::cos(theta);
-
-        for (unsigned long long i = 0; i < nonzero.n_rows; i++) {
-            int x = nonzero(i) / edge.n_rows;
-            int y = nonzero(i) % edge.n_rows;
-            long long rho_rounded = std::llround((x * c + y * s));
-            long long k = rho_rounded + rho_max;
-            acc(j, k) = acc(j, k) + 1;
-        }
-    }
-}
+#include "hough_transform.h"
 
 template<typename T>
 std::unique_ptr<arma::Mat<T>> convolve(const arma::Mat<T> &matrix, const arma::Mat<T> &kernel) {
@@ -167,45 +145,19 @@ int main(int argc, char **argv) {
     arma::Mat<int> edge = arma::sqrt<arma::Mat<int>>(arma::square<arma::Mat<int>>(*edge_x) + arma::square<arma::Mat<int>>(*edge_y));
     print_timestamped("Successfully generated edge matrix.", start);
 
-    const long long rho_max = std::llround(std::sqrt(edge.n_rows * edge.n_rows + edge.n_cols * edge.n_cols));
-    arma::uvec nonzero = arma::find(edge > threshold);
-    arma::Mat<int> acc(1 + 2 * theta_max, 1 + 2 * rho_max, arma::fill::zeros);
-    if (num_threads <= 1) {
-        hough_accumulate(0, 2 * theta_max + 1, std::ref(acc), std::ref(nonzero), std::ref(edge));
-    } else {
-        // Distribute the work to as many threads as allowed
-        std::vector<std::thread> pool(num_threads);
-
-        for (int i = 0; i < num_threads; i++) {
-            int lower = i * ((2 * theta_max + 1) / num_threads);
-            int upper;
-            if (i + 1 == num_threads) {
-                upper = 2 * theta_max + 1;
-            } else {
-                upper = (i + 1) * ((2 * theta_max + 1) / num_threads);
-            }
-            // We pass in a reference to the accumulator matrix itself here, which poses some issues if we
-            // are not careful. All threads will have access to the same matrix in memory, so if any threads
-            // are modifying the same portion of the matrix data will become corrupted.
-            // We solve this by having each thread exclusively write to a unique block of the matrix,
-            // seperated by upper and lower bounds on theta. This needs to be enforced strictly.
-            pool.at(i) = std::thread(hough_accumulate, lower, upper, std::ref(acc), std::ref(nonzero), std::ref(edge));
-        }
-        // Merge the worker threads back into the main one
-        for (int i = 0; i < num_threads; i++) {
-            pool.at(i).join();
-        }
-    }
+    // Compute the Hough transformation accumulation matrix
+    std::unique_ptr<arma::Mat<int>> acc = hough(edge, threshold, num_threads);
     print_timestamped("Successfully generated accumulator matrix.", start);
 
-    save_image_grayscale(acc, "heatmap.png");
+    save_image_grayscale(*acc, "heatmap.png");
 
     unsigned long long max_row = 0;
     unsigned long long max_col = 0;
-    acc.max(max_row, max_col);
+    acc->max(max_row, max_col);
 
-    double theta = pi * ((((double) max_row) - theta_max) / (2 * theta_max));
-    long long rho = max_col - rho_max;
+    const long long rho_max = std::llround(std::sqrt(edge.n_rows * edge.n_rows + edge.n_cols * edge.n_cols));
+    const double theta = pi * ((((double) max_row) - theta_max) / (2 * theta_max));
+    const long long rho = max_col - rho_max;
     cv::Mat lined = cv::imread(input_file, CV_LOAD_IMAGE_GRAYSCALE);
 
     if (theta == 0) {
