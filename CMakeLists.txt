@@ -13,6 +13,6 @@ configure_file(test5.png ${CMAKE_CURRENT_BINARY_DIR}/test5.png COPYONLY)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -O2 -g -march=native -ftree-vectorize -Wall -Werror -Wno-unused")
 
-set(SOURCE_FILES edge_detection.h hough_transform.h hough_transform.cpp main.cpp)
+set(SOURCE_FILES edge_detection.h hough_transform.h hough_transform.cpp main.cpp image_io.h)
 add_executable(Hough ${SOURCE_FILES})
 target_link_libraries(Hough ${ARMADILLO_LIBRARIES} ${OpenCV_LIBS})
