@@ -144,21 +144,21 @@ int main(int argc, char **argv) {
             // This is a flag
             if (strcmp(argv[i], "-j") == 0) {
                 // Number of threads
-                if (i + 1 < argc) {
+                if (i + 1 == argc) {
                     std::cout << "Unspecified number of threads." << std::endl;
                     return -1;
                 }
                 std::string s(argv[++i]);
                 num_threads = std::stoi(s);
             } else if (strcmp(argv[i], "-t") == 0) {
-                if (i + 1 < argc) {
+                if (i + 1 == argc) {
                     std::cout << "Unspecified threshold." << std::endl;
                     return -1;
                 }
                 std::string s(argv[++i]);
                 threshold = std::stoi(s);
             } else if (strcmp(argv[i], "-o") == 0) {
-                if (i + 1 < argc) {
+                if (i + 1 == argc) {
                     std::cout << "Unspecified output file." << std::endl;
                     return -1;
                 }
