@@ -142,24 +142,42 @@ int main(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             // This is a flag
-            if (i + 1 < argc) {
-                if (strcmp(argv[i], "-j") == 0) {
-                    // Number of threads
-                    std::string s(argv[++i]);
-                    num_threads = std::stoi(s);
-                } else if (strcmp(argv[i], "-t") == 0) {
-                    std::string s(argv[++i]);
-                    threshold = std::stoi(s);
-                } else if (strcmp(argv[i], "-o") == 0) {
-                    output_file = argv[++i];
-                } else {
-                    std::cout << "Unknown parameter " << argv[i] << std::endl;
+            if (strcmp(argv[i], "-j") == 0) {
+                // Number of threads
+                if (i + 1 < argc) {
+                    std::cout << "Unspecified number of threads." << std::endl;
+                    return -1;
                 }
+                std::string s(argv[++i]);
+                num_threads = std::stoi(s);
+            } else if (strcmp(argv[i], "-t") == 0) {
+                if (i + 1 < argc) {
+                    std::cout << "Unspecified threshold." << std::endl;
+                    return -1;
+                }
+                std::string s(argv[++i]);
+                threshold = std::stoi(s);
+            } else if (strcmp(argv[i], "-o") == 0) {
+                if (i + 1 < argc) {
+                    std::cout << "Unspecified output file." << std::endl;
+                    return -1;
+                }
+                output_file = argv[++i];
+            } else if (strcmp(argv[i], "-h") == 0) {
+                std::cout << "Detects the largest line in an image.\n\n"
+                        "Example usage: `./Hough -j 8 input_file.png` -- computes the Hough transform on input_file.png"
+                        " using 8 threads and stores the result to output.png.\n\n"
+                        "Flags:\n"
+                        "\t-h\tDisplays this help message.\n"
+                        "\t-j\tNumber of threads to run on.\n"
+                        "\t-t\tThreshold to use when scanning edge matrix.\n"
+                        "\t-o\tOutput file (defaults to output.png).\n" << std::endl;
+                return 0;
+
             } else {
-                std::cout << "Incomplete parameterization." << std::endl;
+                std::cout << "Unknown parameter " << argv[i] << std::endl;
                 return -1;
             }
-
         } else {
             // This is the filename
             if (input_file_set) {
@@ -172,7 +190,7 @@ int main(int argc, char **argv) {
     }
 
     if (!input_file_set) {
-        std::cout << "Need to specify an input file." << std::endl;
+        std::cout << "Need to specify an input file. Use `-h` for help." << std::endl;
         return -1;
     }
 
