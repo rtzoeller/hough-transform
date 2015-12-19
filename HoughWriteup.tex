@@ -8,7 +8,7 @@
 \maketitle
 \newpage
 
-\section{Abstract}
+\section*{Abstract}
 The classical Hough transform provides a convenient technique for detecting lines in an image.
 A thresholded edge matrix is generated for the image (using any one of a number of edge detection
 operators, e.g. the Sobel operator); this matrix is then used in a voting process carried
@@ -19,5 +19,19 @@ This paper presents a multithreaded implementation of the classical Hough transf
 each thread a sub-interval of the search space. Due to the partitioning of the vote accumulation
 matrix, each thread can operate on this sub-interval without synchronization, resulting in a dramatic
 performance increase on dense inputs.
+
+\section{Introduction}
+In the generalized (as well as classical) Hough transform, an edge matrix is generated
+for the input image through two-dimensional image convolution. In practice, a variety of image
+kernels are used for this convolution, including the Sobel, Scharr and Prewitt operators.
+The edge matrix is then thresholded, producing a set of non-zero coordinate pairs.
+These coordinate pairs are the input to the accumulation procedure used to detect prominent
+features -- which, in the case of the classical Hough transform, are lines.
+\\
+In the classical Hough transform, the parameter space used for vote accumulation represents
+the polar normal form of a line, which is given by $\rho=x*\cos{\theta}+y*\sin{\theta}$.
+It has several advantages over the traditional point-slope equations, namely that the search
+space is bounded. In the traditional point-slope form, the slope may approach both positive 
+and negative infinity; the representation of vertical lines requires this.
 
 \end{document}
