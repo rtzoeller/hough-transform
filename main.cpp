@@ -69,16 +69,18 @@ int main(int argc, char **argv) {
             } else if (strcmp(argv[i], "-h") == 0) {
                 std::cout << "Detects the largest line in an image.\n\n"
                         "Example usage: `./Hough -j 8 input_file.png` -- computes the Hough transform on input_file.png"
-                        " using 8 threads and stores the result to output.png.\n\n"
+                        " using 8 threads and stores the result to output.png (the default).\n\n"
                         "Flags:\n"
                         "\t-h\tDisplays this help message.\n"
                         "\t-j\tNumber of threads to run on.\n"
                         "\t-t\tThreshold to use when scanning edge matrix.\n"
-                        "\t-o\tOutput file (defaults to output.png).\n" << std::endl;
+                        "\t-o\tOutput file. Defaults to `output.png`."
+                        " If multiple input files are given, this option is ignored and the output files will take the"
+                        " form `output#.png`, where # is their position in the argument list.\n" << std::endl;
                 return 0;
 
             } else {
-                std::cout << "Unknown parameter " << argv[i] << std::endl;
+                std::cout << "Unknown parameter " << argv[i] << "." << std::endl;
                 return -1;
             }
         } else {
