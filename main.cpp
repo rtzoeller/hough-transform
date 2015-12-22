@@ -6,19 +6,8 @@
 #include "hough_transform.h"
 #include "image_io.h"
 
-void print_timestamped(std::string message, std::chrono::steady_clock::time_point time_zero) {
-    std::chrono::steady_clock::time_point current = std::chrono::steady_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(current - time_zero).count() << ":\t" << message << std::endl;
-}
-
-int main(int argc, char **argv) {
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
-    int num_threads = 1;
-    int threshold = 100;
-    std::string output_file = "output.png";
+void argparse(int argc, char **argv, int &num_threads, int &threshold, std::string &output_file, std::vector<std::string> &input_files) {
     bool input_file_set = false;
-    std::vector<std::string> input_files;
 
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
@@ -27,21 +16,21 @@ int main(int argc, char **argv) {
                 // Number of threads
                 if (i + 1 == argc) {
                     std::cout << "Unspecified number of threads." << std::endl;
-                    return -1;
+                    std::exit(-1);
                 }
                 std::string s(argv[++i]);
                 num_threads = std::stoi(s);
             } else if (strcmp(argv[i], "-t") == 0) {
                 if (i + 1 == argc) {
                     std::cout << "Unspecified threshold." << std::endl;
-                    return -1;
+                    std::exit(-1);
                 }
                 std::string s(argv[++i]);
                 threshold = std::stoi(s);
             } else if (strcmp(argv[i], "-o") == 0) {
                 if (i + 1 == argc) {
                     std::cout << "Unspecified output file." << std::endl;
-                    return -1;
+                    std::exit(-1);
                 }
                 output_file = argv[++i];
             } else if (strcmp(argv[i], "-h") == 0) {
@@ -55,11 +44,11 @@ int main(int argc, char **argv) {
                         "\t-o\tOutput file. Defaults to `output.png`."
                         " If multiple input files are given, this option is ignored and the output files will take the"
                         " form `output#.png`, where # is their position in the argument list.\n" << std::endl;
-                return 0;
+                std::exit(0);
 
             } else {
                 std::cout << "Unknown parameter " << argv[i] << "." << std::endl;
-                return -1;
+                std::exit(-1);
             }
         } else {
             // This is a filename
@@ -70,8 +59,26 @@ int main(int argc, char **argv) {
 
     if (!input_file_set) {
         std::cout << "Need to specify an input file. Use `-h` for help." << std::endl;
-        return -1;
+        std::exit(-1);
     }
+
+}
+
+void print_timestamped(std::string message, std::chrono::steady_clock::time_point time_zero) {
+    std::chrono::steady_clock::time_point current = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(current - time_zero).count() << ":\t" << message << std::endl;
+}
+
+int main(int argc, char **argv) {
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+    // Default values go here - argparse will modify them as needed
+    int num_threads = 1;
+    int threshold = 100;
+    std::string output_file = "output.png";
+    std::vector<std::string> input_files;
+
+    argparse(argc, argv, num_threads, threshold, output_file, input_files);
 
     for (unsigned long i = 0; i < input_files.size(); i++) {
         // Read in the image and convert it to an Armadillo matrix
