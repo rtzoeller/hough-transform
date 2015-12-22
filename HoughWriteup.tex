@@ -31,7 +31,29 @@ features -- which, in the case of the classical Hough transform, are lines.
 In the classical Hough transform, the parameter space used for vote accumulation represents
 the polar normal form of a line, which is given by $\rho=x*\cos{\theta}+y*\sin{\theta}$.
 It has several advantages over the traditional point-slope equations, namely that the search
-space is bounded. In the traditional point-slope form, the slope may approach both positive 
-and negative infinity; the representation of vertical lines requires this.
+space is bounded. In the traditional point-slope form, the slope may approach both positive
+and negative infinity; the representation of vertical lines requires this. Instead, the
+polar normal form allows the entire range of theta to be swept using some small increment.
+
+\section{Challenges}
+While using a polar normal representation as the vote accumulation space is
+conceptually better than the using point-slope form, the implementation of
+the Hough transform with either presents some challenges. Most significantly is
+the high computational cost of the algorithm, which is in many ways hidden by
+the algorithm's asymptotic complexity.
+\\
+The cost of computing the edge matrix using image convolution is $\mathcal{O}(mn)$ for
+an image of dimensions $m$ by $n$. For a square image, this is equivalent to $\mathcal{O}(n^{2})$.
+The cost of convolving each element is linear with the number of entries in the kernel, however
+this cost is dominated by the cost of convolution as the kernel is required to be smaller than
+the input image. Finding the entries of the edge matrix which satisfy some threshold is also linear with
+the number of elements in the input image.
+\\
+The majority of the computational cost of the Hough transform instead stems from the
+$\mathcal{O}(n)$ search of the parameter space, which is simply linear with the number of
+thresholded points. While this is asymptotically dominated by the image convolution cost,
+in practice the increment used to search the range of theta is small, leading to a high
+constant factor. In the presented implementation, 1000 values of theta are sampled for
+each candidate point.
 
 \end{document}
