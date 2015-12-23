@@ -79,4 +79,15 @@ will succeed the actual value. One potential solution to this is to 'smear' the 
 region, i.e. to spread the vote across multiple buckets in a weighted fashion. This feature
 is not present in the presented implementation however, due to performance and weighting concerns.
 
+\section{Implementation}
+The presented implementation attacks the Hough transform in two ways. First, by subdividing the
+interval of theta in the parameter space, multiple cores are able to share the load. In this way,
+the lower bound for the wall time of the vote accumulation process is reduced to $1/n$, where $n$
+is the number of threads sharing the work. Additionally, by ordering the loops such that modifying
+theta is the outer loop and calculating rho for each thresholded point is the inner loop, the
+calculations of $\sin{\theta}$ and $\cos{\theta}$ are reused. The calculation of these two
+trigonometric functions for each theta is the most expensive part of the loop -- unfortunately,
+modern compilers do not appear to be able to interchange the loops and hoist the calculations
+out automatically.
+
 \end{document}
