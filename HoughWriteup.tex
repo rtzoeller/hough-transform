@@ -1,10 +1,12 @@
 \documentclass[letterpaper,12pt,titlepage]{article}
+\usepackage{cite}
 
 \title{Line detection via the Hough transform}
 \date{December 23, 2015}
 \author{Ryan Zoeller}
 
 \begin{document}
+\bibliographystyle{plain}
 \maketitle
 \newpage
 
@@ -86,8 +88,17 @@ the lower bound for the wall time of the vote accumulation process is reduced to
 is the number of threads sharing the work. Additionally, by ordering the loops such that modifying
 theta is the outer loop and calculating rho for each thresholded point is the inner loop, the
 calculations of $\sin{\theta}$ and $\cos{\theta}$ are reused. The calculation of these two
-trigonometric functions for each theta is the most expensive part of the loop -- unfortunately,
-modern compilers do not appear to be able to interchange the loops and hoist the calculations
-out automatically.
+trigonometric functions for each theta is by far the most expensive part of the loop\cite{agnerfog2014}
+-- unfortunately, modern compilers do not appear to be able to interchange the loops and hoist the
+calculations out automatically.
+\\
+Despite the largely component-wise computations required by the Hough transform, an existing
+linear algebra package (Armadillo) was chosen to represent the parameter space for several
+reasons. The package provides compile-time switching of bounds checking via a macro, which enables
+more thorough debugging as well as high performance in the final executable. Additionally, the
+package provides convenient definitions for common functions such as the component-wise square root
+and finding the coordinates of all entries larger than some threshold.
 
+\newpage
+\bibliography{HoughWriteup}
 \end{document}
