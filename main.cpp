@@ -127,10 +127,12 @@ int main(int argc, char **argv) {
         const long long rho_max = std::llround(std::sqrt(edge.n_rows * edge.n_rows + edge.n_cols * edge.n_cols));
         const double theta = pi * ((((double) max_row) - theta_max) / (2 * theta_max));
         const long long rho = max_col - rho_max;
-        cv::Mat lined = cv::imread(input_files.at(i), CV_LOAD_IMAGE_GRAYSCALE);
+        cv::Mat original = cv::imread(input_files.at(i), CV_LOAD_IMAGE_GRAYSCALE);
+        cv::Mat lined;
+        cv::cvtColor(original, lined, cv::COLOR_GRAY2BGR);
 
         if (theta == 0) {
-            cv::line(lined, cv::Point(rho, 0), cv::Point(rho, (*image).n_rows - 1), cv::Scalar(33, 33, 33));
+            cv::line(lined, cv::Point(rho, 0), cv::Point(rho, (*image).n_rows - 1), cv::Scalar(0, 0, 255));
         } else {
             double x = rho * std::cos(theta);
             double y = rho * std::sin(theta);
@@ -138,7 +140,7 @@ int main(int argc, char **argv) {
             long long right_side_x = (*image).n_cols - 1;
             long long left_inter = std::llround(slope * (0 - x) + y);
             long long right_inter = std::llround(slope * (right_side_x - x) + y);
-            cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(33, 33, 33));
+            cv::line(lined, cv::Point(0, left_inter), cv::Point(right_side_x, right_inter), cv::Scalar(0, 0, 255));
         }
 
         if (input_files.size() == 1) {
