@@ -37,6 +37,17 @@ space is bounded. In the traditional point-slope form, the slope may approach bo
 and negative infinity; the representation of vertical lines requires this. Instead, the
 polar normal form allows the entire range of theta to be swept using some small increment.
 
+\section{Related Work}
+The Hough transform was first described by Paul Hough in a 1962 patent\cite{paulhough1962},
+although the description was purely geometric and no algebraic formulation was given.
+The algorithmic foundation for this implementation is the 1972 work of Richard Duda
+and Peter Hart\cite{dudahart1972}. A popular implementation of the Hough transform is
+given by the OpenCV source.
+\\
+An alternative feature detection method to the generalized Hough transform is the Radon transform,
+an integral transform introduced by Johann Radon in 1917. It has been shown that the Hough transform
+is equivalent to the Radon transform in the continuous case\cite{radonhough}.
+
 \section{Challenges}
 While using a polar normal representation as the vote accumulation space is
 conceptually better than the using point-slope form, the implementation of
