@@ -38,16 +38,20 @@ polar normal form allows the entire range of theta to be swept using some small 
 \section{Challenges}
 While using a polar normal representation as the vote accumulation space is
 conceptually better than the using point-slope form, the implementation of
-the Hough transform in general presents some challenges. Most significantly is
+the Hough transform in general presents some challenges. Most significant is
 the high computational cost of the algorithm, which is in many ways hidden by
-the algorithm's asymptotic complexity.
-\\
+the algorithm's asymptotic complexity, as well as the direct correlation between
+numerical accuracy and the constant factor abstracted by this complexity in
+big $\mathcal{O}$ notation.
+
+\subsection{Asymptotic Complexity}
 The cost of computing the edge matrix using image convolution is $\mathcal{O}(mn)$ for
 an image of dimensions $m$ by $n$. For a square image, this is equivalent to $\mathcal{O}(n^{2})$.
 The cost of convolving each element is linear with the number of entries in the kernel, however
 this cost is dominated by the cost of convolution as the kernel is required to be smaller than
 the input image. Finding the entries of the edge matrix which satisfy some threshold is also linear with
-the number of elements in the input image.
+the number of elements in the input image (i.e. $\mathcal{O}(mn)$ in the general case of an $m$
+by $n$ image).
 \\
 The majority of the computational cost of the Hough transform instead stems from the
 $\mathcal{O}(n)$ search of the parameter space, which is simply linear with the number of
@@ -55,5 +59,24 @@ thresholded points. While this is asymptotically dominated by the image convolut
 in practice the increment used to search the range of theta (or any other parameterized value)
 is small, leading to a high constant factor. In the presented implementation, 1000 values of
 theta are sampled for each candidate point.
+
+\subsection{Numerical Precision}
+The accuracy of the computed feature (in the classical case, a line) is proportional to the
+precision of the discretized parameter space. Unfortunately, the computational cost is also
+directly proportional to this precision. As a result, it is extremely important to determine
+the required precision before generating the accumulation matrix, to avoid a result outside
+the required tolerance or a result which is excessively expensive to compute.
+\\
+A further challenge the generalized Hough transform faces is the limit of floating point
+precision. As the precision of the discretized parameter space increases, the impact of
+numerical error also increases. Since the accumulation matrix is used to directly calculate
+the most prominent features, these numerical errors can distort the actual results. At some
+precision (before the machine epsilon is reached), the result is no longer meaningful, as
+numerical error will contribute to neighboring vote buckets instead of the true vote bucket.
+The result of this is either that the actual value will not statistically stand out
+(i.e. neighboring buckets will have approximately the same value) or that a neighboring value
+will succeed the actual value. One potential solution to this is to 'smear' the votes over a
+region, i.e. to spread the vote across multiple buckets in a weighted fashion. This feature
+is not present in the presented implementation however, due to performance and weighting concerns.
 
 \end{document}
