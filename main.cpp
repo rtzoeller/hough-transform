@@ -6,7 +6,7 @@
 #include "hough_transform.h"
 #include "image_io.h"
 
-void argparse(int argc, char **argv, int &num_threads, int &threshold, std::string &output_file, std::vector<std::string> &input_files) {
+void argparse(int argc, char **argv, int &num_threads, int &threshold, bool &verbose, std::string &output_file, std::vector<std::string> &input_files) {
     bool input_file_set = false;
 
     for (int i = 1; i < argc; i++) {
@@ -33,6 +33,8 @@ void argparse(int argc, char **argv, int &num_threads, int &threshold, std::stri
                     std::exit(-1);
                 }
                 output_file = argv[++i];
+            } else if (strcmp(argv[i], "-v") == 0) {
+                verbose = true;
             } else if (strcmp(argv[i], "-h") == 0) {
                 std::cout << "Detects the largest line in an image.\n\n"
                         "Example usage: `./Hough -j 8 input_file.png` -- computes the Hough transform on input_file.png"
@@ -43,7 +45,8 @@ void argparse(int argc, char **argv, int &num_threads, int &threshold, std::stri
                         "\t-t\tThreshold to use when scanning edge matrix.\n"
                         "\t-o\tOutput file. Defaults to `output.png`."
                         " If multiple input files are given, this option is ignored and the output files will take the"
-                        " form `output#.png`, where # is their position in the argument list.\n" << std::endl;
+                        " form `output#.png`, where # is their position in the argument list.\n"
+                        "\t-v\tSave the accumulation matrix as a heatmap." << std::endl;
                 std::exit(0);
 
             } else {
@@ -75,10 +78,11 @@ int main(int argc, char **argv) {
     // Default values go here - argparse will modify them as needed
     int num_threads = 1;
     int threshold = 100;
+    bool verbose = false;
     std::string output_file = "output.png";
     std::vector<std::string> input_files;
 
-    argparse(argc, argv, num_threads, threshold, output_file, input_files);
+    argparse(argc, argv, num_threads, threshold, verbose, output_file, input_files);
 
     for (unsigned long i = 0; i < input_files.size(); i++) {
         // Read in the image and convert it to an Armadillo matrix
@@ -107,7 +111,14 @@ int main(int argc, char **argv) {
         std::unique_ptr<arma::Mat<int>> acc = hough(edge, threshold, num_threads);
         print_timestamped("Successfully generated accumulator matrix.", start);
 
-        save_image_grayscale(*acc, "heatmap.png");
+        if (verbose) {
+            // Only save the heatmap when requested
+            if (input_files.size() == 1) {
+                save_image_grayscale(*acc, "heatmap.png");
+            } else {
+                save_image_grayscale(*acc, "heatmap" + std::to_string(i) + ".png");
+            }
+        }
 
         unsigned long long max_row = 0;
         unsigned long long max_col = 0;
