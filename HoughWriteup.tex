@@ -1,5 +1,9 @@
 \documentclass[letterpaper,12pt]{article}
 \usepackage{cite}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{graphicx}
+\graphicspath{ {reportimages/} }
 
 \title{Line detection via the Hough transform}
 \date{December 23, 2015}
@@ -49,6 +53,7 @@ an integral transform introduced by Johann Radon in 1917. It has been shown that
 is equivalent to the Radon transform in the continuous case\cite{radonhough}.
 
 \section{Challenges}
+\label{sec:chal}
 While using a polar normal representation as the vote accumulation space is
 conceptually better than the using point-slope form, the implementation of
 the Hough transform in general presents some challenges. Most significant is
@@ -93,7 +98,26 @@ region, i.e. to spread the vote across multiple buckets in a weighted fashion. T
 is not present in the presented implementation however, due to performance and weighting concerns.
 
 \section{Implementation}
-The presented implementation attacks the Hough transform in two ways. First, by subdividing the
+The Classical Hough Transform could be implemented as shown in Listing \ref{lst:houghalg}.
+
+\begin{lstlisting}[frame=tb,mathescape,caption={Hough transform algorithm},label={lst:houghalg}]
+E := edge matrix calculated via image convolution
+acc = dim. (1 + 2 * $\rho_{max}$) by (number of $\theta$ values)
+thresholded := {}
+for each pixel p $\in$ E:
+    if (p.value >= threshold):
+        thresholded := thresholded $\cup$ {(p.$x$, p.$y$)}
+for each ($x$, $y$) $\in$ thresholded:
+    for each $\theta \in (-\pi, \pi]$:
+        $\rho$ := $x * \cos{\theta} + y * \sin{\theta}$
+        $\hat{\rho}$ := round $\rho$ to nearest value in acc
+        acc[$\hat{\rho}$, $\theta$] := acc[$\hat{\rho}$, $\theta$] + 1
+return local maxima of acc
+\end{lstlisting}
+
+
+The presented implementation deviates from Listing \ref{lst:houghalg} in order to attack
+the challenges discuseed in Section \ref{sec:chal} in two ways. First, by subdividing the
 interval of theta in the parameter space, multiple cores are able to share the load. In this way,
 the lower bound for the wall time of the vote accumulation process is reduced to $1/n$, where $n$
 is the number of threads sharing the work. Additionally, by ordering the loops such that modifying
@@ -111,6 +135,33 @@ package provides convenient definitions for common functions such as the compone
 and finding the coordinates of all entries larger than some threshold.
 
 \section{Results}
+The correctness of the presented implementation is demonstrated in Figures \ref{fig:unobscuredinput},
+\ref{fig:obscuredinput}, \ref{fig:unobscuredoutput}, and \ref{fig:obscuredoutput}.
+
+\begin{figure}[H]
+    \center{\frame{\includegraphics[width=8cm]{inputA.png}}}
+    \caption{Unobscured input image}
+    \label{fig:unobscuredinput}
+\end{figure}
+
+\begin{figure}[H]
+    \center{\frame{\includegraphics[width=8cm]{inputB.png}}}
+    \caption{Obscured version of Figure \ref{fig:unobscuredinput}}
+    \label{fig:obscuredinput}
+\end{figure}
+
+\begin{figure}[H]
+    \center{\frame{\includegraphics[width=8cm]{outputA.png}}}
+    \caption{Output of Hough transform on Figure \ref{fig:unobscuredinput}}
+    \label{fig:unobscuredoutput}
+\end{figure}
+
+\begin{figure}[H]
+    \center{\frame{\includegraphics[width=8cm]{outputB.png}}}
+    \caption{Output of Hough transform on Figure \ref{fig:obscuredinput}}
+    \label{fig:obscuredoutput}
+\end{figure}
+The same feature is correctly identified in both the unobscured and obscured cases.
 
 \section{Conclusion}
 While parallelization of the image convolution is possible (as with the partitioning of the parameter space,
