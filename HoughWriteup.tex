@@ -110,6 +110,14 @@ more thorough debugging as well as high performance in the final executable. Add
 package provides convenient definitions for common functions such as the component-wise square root
 and finding the coordinates of all entries larger than some threshold.
 
+\section{Results}
+
+\section{Conclusion}
+While parallelization of the image convolution is possible (as with the partitioning of the parameter space,
+this can be done na\"{\i}vely), the convolution process did not contribute significantly to the overall
+runtime of the transform. If a more complex image kernel is used, it may be desirable to distribute the
+computation.
+
 \newpage
 \bibliography{HoughWriteup}
 \end{document}
