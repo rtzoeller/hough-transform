@@ -1,4 +1,4 @@
-\documentclass[letterpaper,12pt,titlepage]{article}
+\documentclass[letterpaper,12pt]{article}
 \usepackage{cite}
 
 \title{Line detection via the Hough transform}
@@ -8,9 +8,8 @@
 \begin{document}
 \bibliographystyle{plain}
 \maketitle
-\newpage
 
-\section*{Abstract}
+\begin{abstract}
 The classical Hough transform provides a convenient technique for detecting lines in an image.
 A thresholded edge matrix is generated for the image (using any one of a number of edge detection
 operators, e.g. the Sobel operator); this matrix is then used in a voting process carried
@@ -18,9 +17,10 @@ out in a parameter space. In the classical Hough transform this parameter space 
 normal form of a line, which is especially useful as it allows for the constrained
 search space $\theta \in (-\pi,\pi]$ as well as for representation of vertical lines.
 This paper presents a multithreaded implementation of the classical Hough transform, which assigns
-each thread a sub-interval of the search space. Due to the partitioning of the vote accumulation
-matrix, each thread can operate on this sub-interval without synchronization, resulting in a dramatic
-performance increase on dense inputs.
+each thread a sub-interval of the search space.
+\end{abstract}
+
+\newpage
 
 \section{Introduction}
 In the generalized (as well as classical) Hough transform, an edge matrix is generated
