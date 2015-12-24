@@ -12,18 +12,18 @@
 \author{Ryan Zoeller}
 
 \begin{document}
-\bibliographystyle{plain}
+\bibliographystyle{unsrt}
 \maketitle
 
 \begin{abstract}
-The classical Hough transform provides a convenient technique for detecting lines in an image.
+The generalized Hough transform provides a convenient technique for detecting features in an image --
+in the classical case, lines.
 A thresholded edge matrix is generated for the image (using any one of a number of edge detection
 operators, e.g. the Sobel operator); this matrix is then used in a voting process carried
 out in a parameter space. In the classical Hough transform this parameter space is the polar
 normal form of a line, which is especially useful as it allows for the constrained
 search space $\theta \in (-\pi,\pi]$ as well as for representation of vertical lines.
-This paper presents a multithreaded implementation of the classical Hough transform, which assigns
-each thread a sub-interval of the search space.
+This paper presents a multithreaded implementation of the classical Hough transform.
 \end{abstract}
 
 \newpage
