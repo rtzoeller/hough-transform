@@ -104,10 +104,10 @@ The Classical Hough Transform could be implemented as shown in Listing \ref{lst:
 
 \begin{lstlisting}[frame=tb,mathescape,caption={Hough transform algorithm},label={lst:houghalg}]
 E := edge matrix calculated via image convolution
-acc = dim. (1 + 2 * $\rho_{max}$) by (number of $\theta$ values)
+acc := dim. (1 + 2 * $\rho_{max}$) by (number of $\theta$ values)
 thresholded := {}
 for each pixel p $\in$ E:
-    if (p.value >= threshold):
+    if (p.value $\geq$ threshold):
         thresholded := thresholded $\cup$ {(p.$x$, p.$y$)}
 for each ($x$, $y$) $\in$ thresholded:
     for each $\theta \in (-\pi, \pi]$:
@@ -190,6 +190,9 @@ While the hardware implements eight threads, there are only four physical cores.
 performance benefits associated with the eight-thread parallelization are likely understated.
 
 \section{Conclusion}
+\subsection{Conclusions}
+This paper presents a multithreaded implementation of the classical Hough transform and a discussion
+of the challenges faced in computing the transform.
 Parallelizing the Hough transform can be done na\"{\i}vely through clever partitioning of the parameter space.
 In the non-sparse case, the performance benefits of this can be significant; for sparse edge matrices any performance
 benefits are likely dominated by the cost of thread creation.
@@ -199,10 +202,14 @@ this can be done na\"{\i}vely), the convolution process did not contribute signi
 runtime of the transform in images. If a more complex image kernel is used, it may be desirable to distribute the
 computation, however the overhead of thread creation will likely dominate any perfomance benefits achieved for
 most image sizes.
-\\
-Future work on this implementation will likely include further restructuring of the parameter space iteration
-to support vectorization. Additional research could enable the program to self-manage the thread creation
-based on the sparsity of the edge matrix and the granularity of the search space.
+
+\subsection{Future Work}
+Future work will likely include further restructuring of the parameter space iteration to support vectorization.
+Additional research could enable the program to self-manage the thread creation based on the sparsity of the edge
+matrix and the granularity of the search space. The representation of the accumulation matrix could potentially
+be switched to a sparse implementation, as a large percentage of the accumulation matrix remains zero throughout
+the computation (this can be illustrated by running the presented implementation in verbose mode and examining
+the resulting heatmap).
 
 \newpage
 \bibliography{HoughWriteup}
