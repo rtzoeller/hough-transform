@@ -3,6 +3,8 @@
 \usepackage{float}
 \usepackage{listings}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
 \graphicspath{ {reportimages/} }
 
 \title{Line detection via the Hough transform}
@@ -112,9 +114,8 @@ for each ($x$, $y$) $\in$ thresholded:
         $\rho$ := $x * \cos{\theta} + y * \sin{\theta}$
         $\hat{\rho}$ := round $\rho$ to nearest value in acc
         acc[$\hat{\rho}$, $\theta$] := acc[$\hat{\rho}$, $\theta$] + 1
-return local maxima of acc
+return coordinates of local maxima of acc
 \end{lstlisting}
-
 
 The presented implementation deviates from Listing \ref{lst:houghalg} in order to attack
 the challenges discuseed in Section \ref{sec:chal} in two ways. First, by subdividing the
@@ -136,7 +137,8 @@ and finding the coordinates of all entries larger than some threshold.
 
 \section{Results}
 The correctness of the presented implementation is demonstrated in Figures \ref{fig:unobscuredinput},
-\ref{fig:obscuredinput}, \ref{fig:unobscuredoutput}, and \ref{fig:obscuredoutput}.
+\ref{fig:obscuredinput}, \ref{fig:unobscuredoutput}, and \ref{fig:obscuredoutput}, in which
+the correct feature is detected in both the unobscured and obscured cases.
 
 \begin{figure}[H]
     \center{\frame{\includegraphics[width=8cm]{inputA.png}}}
@@ -161,13 +163,46 @@ The correctness of the presented implementation is demonstrated in Figures \ref{
     \caption{Output of Hough transform on Figure \ref{fig:obscuredinput}}
     \label{fig:obscuredoutput}
 \end{figure}
-The same feature is correctly identified in both the unobscured and obscured cases.
+The multithreaded implementation of the parameter space search provides a dramatic performance increase,
+as seen in Figure \ref{fig:graph}, which reflects the execution time of the Hough transform of Figure \ref{fig:unobscuredinput},
+averaged over ten trials (not including removed outliers). The sparsity of edges in Figure \ref{fig:unobscuredinput}
+is responsible for the relatively high non-parallelized constant factor (i.e. where the execution time levels off) in
+comparison to the execution time of the parallelized inner loop; this factor will remain approximately constant as the number
+of edge pixels (and thus overall execution time) increases.
+
+\begin{figure}[H]
+    \center{\begin{tikzpicture}
+        \begin{axis} [xlabel={Number of threads},
+                        ylabel={Execution time (microseconds)},
+                        xmin=0,
+                        xmax=9,
+                        ymin=100000,
+                        ymax=300000]
+            \addplot[color=blue,mark=square] coordinates {(1,246742) (2,169985) (3,138997) (4,128476) (8,119922)};
+        \end{axis}
+    \end{tikzpicture}}
+    \caption{Diminishing returns of a multithreaded approach}
+    \label{fig:graph}
+\end{figure}
+
+The computations in Figure \ref{fig:graph} were performed on an Intel Core i7 4700MQ using the CFQ scheduler.
+While the hardware implements eight threads, there are only four physical cores. As a result, the potential
+performance benefits associated with the eight-thread parallelization are likely understated.
 
 \section{Conclusion}
+Parallelizing the Hough transform can be done na\"{\i}vely through clever partitioning of the parameter space.
+In the non-sparse case, the performance benefits of this can be significant; for sparse edge matrices any performance
+benefits are likely dominated by the cost of thread creation.
+\\
 While parallelization of the image convolution is possible (as with the partitioning of the parameter space,
 this can be done na\"{\i}vely), the convolution process did not contribute significantly to the overall
-runtime of the transform. If a more complex image kernel is used, it may be desirable to distribute the
-computation.
+runtime of the transform in images. If a more complex image kernel is used, it may be desirable to distribute the
+computation, however the overhead of thread creation will likely dominate any perfomance benefits achieved for
+most image sizes.
+\\
+Future work on this implementation will likely include further restructuring of the parameter space iteration
+to support vectorization. Additional research could enable the program to self-manage the thread creation
+based on the sparsity of the edge matrix and the granularity of the search space.
 
 \newpage
 \bibliography{HoughWriteup}
