@@ -4,6 +4,13 @@
 #include <armadillo>
 #include <memory>
 
+/**
+ * \file edge_detection.h Edge detection via image convolution
+ */
+
+/**
+ * \brief The Sobel kernel in the x direction
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> get_sobel_x() {
     std::unique_ptr<arma::Mat<T>> Gx = std::make_unique<arma::Mat<T>>(3, 3);
@@ -13,6 +20,9 @@ std::unique_ptr<arma::Mat<T>> get_sobel_x() {
     return Gx;
 }
 
+/**
+ * \brief The Sobel kernel in the y direction
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> get_sobel_y() {
     std::unique_ptr<arma::Mat<T>> Gy = std::make_unique<arma::Mat<T>>(3, 3);
@@ -22,6 +32,9 @@ std::unique_ptr<arma::Mat<T>> get_sobel_y() {
     return Gy;
 }
 
+/**
+ * \brief The Scharr kernel in the x direction
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> get_scharr_x() {
     std::unique_ptr<arma::Mat<T>> Gx = std::make_unique<arma::Mat<T>>(3, 3);
@@ -31,6 +44,9 @@ std::unique_ptr<arma::Mat<T>> get_scharr_x() {
     return Gx;
 }
 
+/**
+ * \brief The Scharr kernel in the y direction
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> get_scharr_y() {
     std::unique_ptr<arma::Mat<T>> Gy = std::make_unique<arma::Mat<T>>(3, 3);
@@ -40,6 +56,9 @@ std::unique_ptr<arma::Mat<T>> get_scharr_y() {
     return Gy;
 }
 
+/**
+ * \brief The Prewitt kernel in the x direction
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> get_prewitt_x() {
     std::unique_ptr<arma::Mat<T>> Gx = std::make_unique<arma::Mat<T>>(3, 3);
@@ -49,6 +68,9 @@ std::unique_ptr<arma::Mat<T>> get_prewitt_x() {
     return Gx;
 }
 
+/**
+ * \brief The Prewitt kernel in the y direction
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> get_prewitt_y() {
     std::unique_ptr<arma::Mat<T>> Gy = std::make_unique<arma::Mat<T>>(3, 3);
@@ -58,6 +80,14 @@ std::unique_ptr<arma::Mat<T>> get_prewitt_y() {
     return Gy;
 }
 
+/**
+ * \brief Two dimensional image convolution
+ *
+ * \param[in]   matrix  The matrix to convolve
+ * \param[in]   kernel  The operator used in convolution
+ *
+ * \returns The result of the image convolution
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> convolve(const arma::Mat<T> &matrix, const arma::Mat<T> &kernel) {
     // TODO: Specialize for separable kernels

@@ -5,6 +5,15 @@
 #include <opencv2/opencv.hpp>
 #include <memory>
 
+/**
+ * \file image_io.h Image manipulation and OpenCV <-> Armadillo conversions
+ */
+
+/**
+ * \brief Load an image into an Armadillo matrix
+ *
+ * \param[in]   filename    The file to load
+ */
 template<typename T>
 std::unique_ptr<arma::Mat<T>> open_image_grayscale(std::string filename) {
     // Armadillo stores matrices in column major order, OpenCV in row major order,
@@ -15,10 +24,15 @@ std::unique_ptr<arma::Mat<T>> open_image_grayscale(std::string filename) {
     return std::make_unique<arma::Mat<T>>(arma::conv_to<arma::Mat<T>>::from(output));
 }
 
+/**
+ * \brief Save an Armadillo matrix to a file in grayscale
+ *
+ * \param[in]   matrix      The matrix to save
+ * \param[in]   filename    The file to save the matrix to
+ */
 template<typename T>
 void save_image_grayscale(const arma::Mat<T> &matrix, std::string filename) {
     // Scale down to a 0-255 range
-
     arma::Mat<T> scaled(matrix);
     scaled *= 255;
     scaled /= matrix.max();
