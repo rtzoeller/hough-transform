@@ -15,6 +15,7 @@ Building the Project
 --------------------
 
 Building the project requires CMake 3.3 or later, as well as recent versions of both OpenCV2 and Armadillo.
+The prebuilt binaries expect a Fedora-like distribution of shared libraries.
 
 Running the Program
 -------------------
